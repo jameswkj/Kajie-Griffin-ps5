@@ -56,14 +56,114 @@ alt.renderers.enable("png")
 ### 1. Scraping (PARTNER 1)
 
 ```{python}
+# Required libraries for web scraping and data handling
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
 
+# Define the target URL for scraping data
+url = 'https://oig.hhs.gov/fraud/enforcement/'
+
+# Initiate a GET request to fetch data from the URL
+web_data = requests.get(url)
+
+# Utilize BeautifulSoup to parse the fetched HTML content
+parsed_html = BeautifulSoup(web_data.text, 'html.parser')
+
+# Prepare an empty list to hold the data of enforcement actions
+collected_data = []
+
+# Iterate over each element in the section containing the data
+for element in parsed_html.find_all('li', class_='usa-card'):
+    # Locate and clean the title and link, ensuring all entries are captured even if some details are missing
+    title_element = element.find('a')
+    title = title_element.text.strip() if title_element else 'No title found'
+    link = title_element['href'] if title_element else 'No link found'
+
+    # Search for and format the date, managing missing entries effectively
+    date_element = element.find('span', class_='text-base-dark')
+    date = date_element.text.strip() if date_element else 'No date found'
+
+    # Identify and strip the category, accounting for possible absences
+    category_element = element.find('li', class_='display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1')
+    category = category_element.text.strip() if category_element else 'No category found'
+
+    # Append the collected details to the list
+    collected_data.append({
+        'Title': title,
+        'Date': date,
+        'Category': category,
+        'Link': link
+    })
+
+# Transform the collected list of dictionaries into a DataFrame for better data management
+dataframe = pd.DataFrame(collected_data)
+
+# Print the top rows of the DataFrame to verify correct data collection
+print(dataframe.head())
+
+# Export the DataFrame to a CSV file in the current directory
+dataframe.to_csv('enforcement_actions.csv', index=False)
 ```
 
   
 ### 2. Crawling (PARTNER 1)
 
 ```{python}
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
 
+# Define the target URL for scraping data
+url = 'https://oig.hhs.gov/fraud/enforcement/'
+
+# Initiate a GET request to fetch data from the URL
+web_data = requests.get(url)
+
+# Utilize BeautifulSoup to parse the fetched HTML content
+parsed_html = BeautifulSoup(web_data.text, 'html.parser')
+
+# Prepare an empty list to hold the data of enforcement actions
+collected_data = []
+
+# Iterate over each element in the section containing the data
+for element in parsed_html.find_all('li', class_='usa-card'):
+    title_element = element.find('a')
+    title = title_element.text.strip() if title_element else 'No title found'
+    link = 'https://oig.hhs.gov' + title_element['href'] if title_element else 'No link found'
+
+    # Follow the link to scrape the agency name
+    agency_response = requests.get(link)
+    agency_soup = BeautifulSoup(agency_response.text, 'html.parser')
+    # Look for the span containing 'Agency:' and safely extract the following sibling's text
+    agency_info = agency_soup.find(lambda tag: tag.name == "span" and 'Agency:' in tag.text)
+    if agency_info and agency_info.next_sibling and hasattr(agency_info.next_sibling, 'text'):
+        agency_name = agency_info.next_sibling.text.strip()
+    else:
+        agency_name = 'No agency found'
+
+    date_element = element.find('span', class_='text-base-dark')
+    date = date_element.text.strip() if date_element else 'No date found'
+
+    category_element = element.find('li', class_='display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1')
+    category = category_element.text.strip() if category_element else 'No category found'
+
+    collected_data.append({
+        'Title': title,
+        'Date': date,
+        'Category': category,
+        'Link': link,
+        'Agency': agency_name
+    })
+
+# Transform the collected list of dictionaries into a DataFrame for better data management
+dataframe = pd.DataFrame(collected_data)
+
+# Print the top rows of the DataFrame to verify correct data collection
+print(dataframe.head())
+
+# Export the DataFrame to a CSV file in the current directory
+dataframe.to_csv('enforcement_actions_detailed.csv', index=False)
 ```
 
 ## Step 2: Making the scraper dynamic
