@@ -282,14 +282,14 @@ def scrape_function(start_month, start_year):
     return df
 
 # Example usage of the function
-df = scrape_function(1, 2023)
+test_df = scrape_function(1, 2023)
 
 # Print total enforcement actions in the DataFrame
-print(f"\nTotal enforcement actions: {len(df)}")
+print(f"\nTotal enforcement actions: {len(test_df)}")
 
 # Find and print the earliest enforcement action
 if not df.empty:
-    earliest_action = df.sort_values(by='Date').iloc[0]
+    earliest_action = test_df.sort_values(by='Date').iloc[0]
     print("Earliest Enforcement Action:")
     print(earliest_action)
 ```
@@ -297,7 +297,17 @@ if not df.empty:
 * c. Test Partner's Code (PARTNER 1)
 
 ```{python}
+# Example usage of the function
+partner_test_df = scrape_function(1, 2021)
 
+# Print total enforcement actions in the DataFrame
+print(f"\nTotal enforcement actions: {len(partner_test_df)}")
+
+# Find and print the earliest enforcement action
+if not df.empty:
+    earliest_action_partner = partner_test_df.sort_values(by='Date').iloc[0]
+    print("Earliest Enforcement Action:")
+    print(earliest_action_partner)
 ```
 
 ## Step 3: Plot data based on scraped data
