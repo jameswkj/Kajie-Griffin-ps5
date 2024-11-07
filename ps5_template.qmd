@@ -288,7 +288,7 @@ test_df = scrape_function(1, 2023)
 print(f"\nTotal enforcement actions: {len(test_df)}")
 
 # Find and print the earliest enforcement action
-if not df.empty:
+if not test_df.empty:
     earliest_action = test_df.sort_values(by='Date').iloc[0]
     print("Earliest Enforcement Action:")
     print(earliest_action)
@@ -304,7 +304,7 @@ partner_test_df = scrape_function(1, 2021)
 print(f"\nTotal enforcement actions: {len(partner_test_df)}")
 
 # Find and print the earliest enforcement action
-if not df.empty:
+if not partner_test_df.empty:
     earliest_action_partner = partner_test_df.sort_values(by='Date').iloc[0]
     print("Earliest Enforcement Action:")
     print(earliest_action_partner)
