@@ -44,6 +44,7 @@ output:
 import pandas as pd
 import altair as alt
 import time
+from datetime import datetime
 
 import warnings 
 warnings.filterwarnings('ignore')
@@ -62,19 +63,19 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 # Define the target URL for scraping data
-url = 'https://oig.hhs.gov/fraud/enforcement/'
+oig_url = 'https://oig.hhs.gov/fraud/enforcement/'
 
 # Initiate a GET request to fetch data from the URL
-web_data = requests.get(url)
+oig_web_data = requests.get(oig_url)
 
 # Utilize BeautifulSoup to parse the fetched HTML content
-parsed_html = BeautifulSoup(web_data.text, 'html.parser')
+oig_parsed_html = BeautifulSoup(oig_web_data.text, 'html.parser')
 
 # Prepare an empty list to hold the data of enforcement actions
-collected_data = []
+collected_enforcement_data = []
 
 # Iterate over each element in the section containing the data
-for element in parsed_html.find_all('li', class_='usa-card'):
+for element in oig_parsed_html.find_all('li', class_='usa-card'):
     # Locate and clean the title and link, ensuring all entries are captured even if some details are missing
     title_element = element.find('a')
     title = title_element.text.strip() if title_element else 'No title found'
@@ -89,7 +90,7 @@ for element in parsed_html.find_all('li', class_='usa-card'):
     category = category_element.text.strip() if category_element else 'No category found'
 
     # Append the collected details to the list
-    collected_data.append({
+    collected_enforcement_data.append({
         'Title': title,
         'Date': date,
         'Category': category,
@@ -97,58 +98,46 @@ for element in parsed_html.find_all('li', class_='usa-card'):
     })
 
 # Transform the collected list of dictionaries into a DataFrame for better data management
-dataframe = pd.DataFrame(collected_data)
+enforcement_dataframe = pd.DataFrame(collected_enforcement_data)
 
 # Print the top rows of the DataFrame to verify correct data collection
-print(dataframe.head())
+print(enforcement_dataframe.head())
 
 # Export the DataFrame to a CSV file in the current directory
-dataframe.to_csv('enforcement_actions.csv', index=False)
+enforcement_dataframe.to_csv('enforcement_actions.csv', index=False)
 ```
 
   
 ### 2. Crawling (PARTNER 1)
 
 ```{python}
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
+# List to hold data with additional 'Agency' field
+collected_data_with_agency = []
 
-# Define the target URL for scraping data
-url = 'https://oig.hhs.gov/fraud/enforcement/'
-
-# Initiate a GET request to fetch data from the URL
-web_data = requests.get(url)
-
-# Utilize BeautifulSoup to parse the fetched HTML content
-parsed_html = BeautifulSoup(web_data.text, 'html.parser')
-
-# Prepare an empty list to hold the data of enforcement actions
-collected_data = []
-
-# Iterate over each element in the section containing the data
-for element in parsed_html.find_all('li', class_='usa-card'):
+# Iterate over each enforcement action entry found in parsed HTML
+for element in oig_parsed_html.find_all('li', class_='usa-card'):
     title_element = element.find('a')
     title = title_element.text.strip() if title_element else 'No title found'
     link = 'https://oig.hhs.gov' + title_element['href'] if title_element else 'No link found'
-
-    # Follow the link to scrape the agency name
-    agency_response = requests.get(link)
-    agency_soup = BeautifulSoup(agency_response.text, 'html.parser')
-    # Look for the span containing 'Agency:' and safely extract the following sibling's text
-    agency_info = agency_soup.find(lambda tag: tag.name == "span" and 'Agency:' in tag.text)
-    if agency_info and agency_info.next_sibling and hasattr(agency_info.next_sibling, 'text'):
-        agency_name = agency_info.next_sibling.text.strip()
+    
+    # Fetch and parse the linked page for agency information
+    if title_element:
+        agency_response = requests.get(link)
+        agency_soup = BeautifulSoup(agency_response.text, 'html.parser')
+        agency_info = agency_soup.find(lambda tag: tag.name == "span" and 'Agency:' in tag.text)
+        agency_name = agency_info.next_sibling.text.strip() if agency_info and agency_info.next_sibling else 'No agency found'
     else:
         agency_name = 'No agency found'
 
+    # Use previously parsed date and category information
     date_element = element.find('span', class_='text-base-dark')
     date = date_element.text.strip() if date_element else 'No date found'
 
     category_element = element.find('li', class_='display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1')
     category = category_element.text.strip() if category_element else 'No category found'
 
-    collected_data.append({
+    # Append the additional details to the list
+    collected_data_with_agency.append({
         'Title': title,
         'Date': date,
         'Category': category,
@@ -156,14 +145,10 @@ for element in parsed_html.find_all('li', class_='usa-card'):
         'Agency': agency_name
     })
 
-# Transform the collected list of dictionaries into a DataFrame for better data management
-dataframe = pd.DataFrame(collected_data)
-
-# Print the top rows of the DataFrame to verify correct data collection
-print(dataframe.head())
-
-# Export the DataFrame to a CSV file in the current directory
-dataframe.to_csv('enforcement_actions_detailed.csv', index=False)
+# Create a DataFrame and save to CSV
+detailed_dataframe = pd.DataFrame(collected_data_with_agency)
+print(detailed_dataframe.head())
+detailed_dataframe.to_csv('enforcement_actions_detailed.csv', index=False)
 ```
 
 ## Step 2: Making the scraper dynamic
@@ -172,11 +157,141 @@ dataframe.to_csv('enforcement_actions_detailed.csv', index=False)
 
 * a. Pseudo-Code (PARTNER 2)
 
+Define the function and its 2 inputs 
+
+Check for valid year
+
+Use an if statement: if start_year earlier than 2013, print a message telling user its invalid. 
+No else statement needed.
+
+Setup base_url and an empty list as in previous code.
+
+Create datetime object from inputs and grab today's date as a datetime object.
+
+Use a While loop. 
+The loop should go through the site's pages until it finds a date outside of the range specified. That is, it should start with the current date and move backwards until it finds a date older than the function inputs. But we can't do that here. It makes more sense to do it in the For loop below.
+The While loop also needs a counter to move forward through the website's pages.
+
+Use requests.get() to fetch the data from the page.
+
+Then, using the code above as a guide...
+
+Use BeautifulSoup to parse the HTML content of the page. This code to be based on the code above.
+
+Begin a For loop. For each action find:
+  Title and Link
+  Date
+  Category
+  Agency Information:
+This is where we create the conditions to exit the While loop. If the date is older than the inputs of the function, the function should just return what its got and stop looping.
+
+Create a dictionary of the actions.
+Append this dictionary to empty list.
+
+Use time.sleep(1) to wait for 1 second.
+
+Increment the page counter by 1 to go to next page.
+
+After the loop, convert the created list (of dictionaries) to a DataFrame.
+Save the DataFrame as a csv.
 
 * b. Create Dynamic Scraper (PARTNER 2)
 
 ```{python}
+def scrape_function(start_month, start_year):
+    # Check that the year is within bounds
+    if start_year < 2013:
+        print("Please restrict the year to 2013 or later.")
+        return
+    
+    # Define the base URL
+    base_url = 'https://oig.hhs.gov/fraud/enforcement/'
+    collected_data = []
+    
+    # Convert start date to datetime and determine today's date
+    start_date = datetime(start_year, start_month, 1)
+    today_date = datetime.today()
+    
+    # Paginate through results until we reach the start_date
+    page = 1
+    while True:
+        # Fetch data for the current page
+        url = f"{base_url}?page={page}"
+        response = requests.get(url)
+        if response.status_code != 200:
+            print("Failed to retrieve data.")
+            break
+        
+        # Parse the HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+        actions = soup.find_all('li', class_='usa-card')
+        
+        # Process each enforcement action item
+        for action in actions:
+            title_element = action.find('a')
+            title = title_element.text.strip() if title_element else 'No title found'
+            link = 'https://oig.hhs.gov' + title_element['href'] if title_element else 'No link found'
 
+            # Extract and parse the date
+            date_element = action.find('span', class_='text-base-dark')
+            date_str = date_element.text.strip() if date_element else 'No date found'
+            date_obj = datetime.strptime(date_str, '%B %d, %Y') if date_element else None
+            
+            # Break out of loop if the date is before start_date
+            if date_obj and date_obj < start_date:
+                # Convert to DataFrame and return if we've reached the start date
+                df = pd.DataFrame(collected_data)
+                filename = f"enforcement_actions_{start_year}_{start_month:02d}.csv"
+                df.to_csv(filename, index=False)
+                print(f"Data saved to {filename}")
+                return df
+            
+            # Extract category
+            category_element = action.find('li', class_='display-inline-block usa-tag text-no-lowercase text-base-darkest bg-base-lightest margin-right-1')
+            category = category_element.text.strip() if category_element else 'No category found'
+            
+            # Visit link to extract agency info
+            agency_name = 'No agency found'
+            if link != 'No link found':
+                agency_response = requests.get(link)
+                agency_soup = BeautifulSoup(agency_response.text, 'html.parser')
+                agency_info = agency_soup.find(lambda tag: tag.name == "span" and 'Agency:' in tag.text)
+                if agency_info and agency_info.next_sibling and hasattr(agency_info.next_sibling, 'text'):
+                    agency_name = agency_info.next_sibling.text.strip()
+
+            # Append data
+            collected_data.append({
+                'Title': title,
+                'Date': date_str,
+                'Category': category,
+                'Link': link,
+                'Agency': agency_name
+            })
+        
+        # Wait before going to the next page to avoid server blocks
+        time.sleep(1)
+        
+        # Move to the next page
+        page += 1
+
+    # Ensure collected_data is returned as a DataFrame at the end of scraping
+    df = pd.DataFrame(collected_data)
+    filename = f"enforcement_actions_{start_year}_{start_month:02d}.csv"
+    df.to_csv(filename, index=False)
+    print(f"Data saved to {filename}")
+    return df
+
+# Example usage of the function
+df = scrape_function(1, 2023)
+
+# Print total enforcement actions in the DataFrame
+print(f"\nTotal enforcement actions: {len(df)}")
+
+# Find and print the earliest enforcement action
+if not df.empty:
+    earliest_action = df.sort_values(by='Date').iloc[0]
+    print("Earliest Enforcement Action:")
+    print(earliest_action)
 ```
 
 * c. Test Partner's Code (PARTNER 1)
