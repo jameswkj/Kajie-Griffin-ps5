@@ -323,13 +323,81 @@ if not df.empty:
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
+import pandas as pd
+import altair as alt
 
+# Load the CSV file into a DataFrame
+df = pd.read_csv('/Users/Kaijie/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
+
+# Categorize the data
+def categorize_group(row):
+    if "state" in row['Agency'].lower():
+        return 'State Enforcement Agencies'
+    else:
+        return 'Criminal and Civil Actions'
+
+df['Category'] = df.apply(categorize_group, axis=1)
+
+# Convert date if necessary
+df['Date'] = pd.to_datetime(df['Date'])
+
+# Group and count actions per category per time period (e.g., monthly)
+action_counts = df.groupby([pd.Grouper(key='Date', freq='M'), 'Category']).size().reset_index(name='Counts')
+
+# Create a line chart
+chart = alt.Chart(action_counts).mark_line(point=True).encode(
+    x=alt.X('month(Date):T', title='Month'),
+    y=alt.Y('Counts:Q', title='Number of Enforcement Actions'),
+    color=alt.Color('Category:N', legend=alt.Legend(title="Category")),
+    tooltip=[alt.Tooltip('month(Date):T', title='Month'), 'Counts', 'Category']
+).properties(
+    title='Number of Enforcement Actions Over Time by Category',
+    width=600,
+    height=300
+).interactive()
+
+chart.display()
 ```
 
 * based on five topics
 
 ```{python}
+# Load the CSV file into a DataFrame
+data = pd.read_csv('/Users/Kaijie/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
 
+# Function to categorize titles based on keywords
+def categorize_title(title):
+    title = title.lower()
+    if any(word in title for word in ["health", "medical", "hospital", "clinic", "medicare", "medicaid"]):
+        return "Health Care Fraud"
+    elif any(word in title for word in ["bank", "financial", "money laundering", "fraudulent", "embezzlement"]):
+        return "Financial Fraud"
+    elif any(word in title for word in ["drug", "pharmacy", "narcotic", "opioid"]):
+        return "Drug Enforcement"
+    elif any(word in title for word in ["bribery", "corrupt", "kickback"]):
+        return "Bribery/Corruption"
+    else:
+        return "Other"
+
+# Apply categorization function to the title column
+data['Topic'] = data['Title'].apply(categorize_title)
+
+# Group by topic and count occurrences
+topic_counts = data['Topic'].value_counts().reset_index()
+topic_counts.columns = ['Topic', 'Number of Actions']
+
+# Create a line chart using Altair
+line_chart = alt.Chart(topic_counts).mark_line(point=True).encode(
+    x=alt.X('Topic', sort=None, title='Topic'),
+    y=alt.Y('Number of Actions', title='Number of Actions'),
+    tooltip=['Topic', 'Number of Actions']
+).properties(
+    title='Number of Enforcement Actions by Topic',
+    width=600,
+    height=400
+)
+
+line_chart.display()
 ```
 
 ## Step 4: Create maps of enforcement activity
