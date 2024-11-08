@@ -326,34 +326,44 @@ if not partner_test_df.empty:
 import pandas as pd
 import altair as alt
 
-# Load the CSV file into a DataFrame
-df = pd.read_csv('/Users/Kaijie/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
+# Load the data
+file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
+enforcement_data = pd.read_csv(file_path)
 
-# Categorize the data
-def categorize_group(row):
-    if "state" in row['Agency'].lower():
-        return 'State Enforcement Agencies'
-    else:
-        return 'Criminal and Civil Actions'
+# Convert 'Date' column to datetime format to handle monthly grouping
+enforcement_data['Date'] = pd.to_datetime(enforcement_data['Date'], errors='coerce')
 
-df['Category'] = df.apply(categorize_group, axis=1)
+# Drop rows where 'Date' conversion failed
+enforcement_data = enforcement_data.dropna(subset=['Date'])
 
-# Convert date if necessary
-df['Date'] = pd.to_datetime(df['Date'])
+# Extract month and year from 'Date' for grouping
+enforcement_data['YearMonth'] = enforcement_data['Date'].dt.to_period('M')
 
-# Group and count actions per category per time period (e.g., monthly)
-action_counts = df.groupby([pd.Grouper(key='Date', freq='M'), 'Category']).size().reset_index(name='Counts')
+# Filter the data to include only the specified categories
+filtered_data = enforcement_data[enforcement_data['Category'].isin(['Criminal and Civil Actions', 'State Enforcement Agencies'])]
 
-# Create a line chart
-chart = alt.Chart(action_counts).mark_line(point=True).encode(
-    x=alt.X('month(Date):T', title='Month'),
-    y=alt.Y('Counts:Q', title='Number of Enforcement Actions'),
-    color=alt.Color('Category:N', legend=alt.Legend(title="Category")),
-    tooltip=[alt.Tooltip('month(Date):T', title='Month'), 'Counts', 'Category']
+# Group by YearMonth and Category, counting occurrences in each group
+filtered_monthly_counts = filtered_data.groupby(['YearMonth', 'Category']).size().unstack(fill_value=0)
+
+# Reset the index and convert YearMonth to string for Altair compatibility
+filtered_monthly_counts = filtered_monthly_counts.reset_index()
+filtered_monthly_counts['YearMonth'] = filtered_monthly_counts['YearMonth'].astype(str)
+
+# Melt the dataframe for Altair compatibility
+filtered_long_df = filtered_monthly_counts.melt(id_vars='YearMonth', 
+                                                var_name='Category', 
+                                                value_name='Count')
+
+# Create the Altair line chart
+chart = alt.Chart(filtered_long_df).mark_line(point=True).encode(
+    x=alt.X('YearMonth:T', title='Month'),
+    y=alt.Y('Count', title='Number of Enforcement Actions'),
+    color=alt.Color('Category', legend=alt.Legend(title='Category')),
+    tooltip=['YearMonth', 'Category', 'Count']
 ).properties(
-    title='Number of Enforcement Actions Over Time by Category',
+    title='Monthly Enforcement Actions: Criminal and Civil Actions vs. State Enforcement Agencies',
     width=600,
-    height=300
+    height=400
 ).interactive()
 
 chart.display()
@@ -405,7 +415,77 @@ line_chart.display()
 ### 1. Map by State (PARTNER 1)
 
 ```{python}
+import re
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+# Define U.S. states list
+us_states = [
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", 
+    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", 
+    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana", 
+    "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", 
+    "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", 
+    "New Hampshire", "New Jersey", "New Mexico", "New York", 
+    "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", 
+    "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", 
+    "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", 
+    "West Virginia", "Wisconsin", "Wyoming"
+]
+
+# Define a function to find a state name in a text string
+def get_state_from_text(text):
+    text = text.lower()  # Normalize to lowercase for matching
+    for state in us_states:
+        if re.search(r"\b" + state.lower() + r"\b", text):
+            return state
+    return None
+
+# Apply the function to extract state names
+data['State'] = data['Agency'].apply(get_state_from_text)
+
+# Count occurrences of each state and merge with the full state list
+state_counts = data['State'].value_counts().reset_index()
+state_counts.columns = ['State', 'Enforcement Actions']
+
+# Ensure all states are included, even those with no actions
+state_data = pd.DataFrame(us_states, columns=['State']).merge(state_counts, on='State', how='left')
+state_data['Enforcement Actions'].fillna(0, inplace=True)
+
+# Load the shapefile and filter only for relevant states
+shape_data = gpd.read_file(r'C:\Users\james\Desktop\cb_2018_us_state_500k\cb_2018_us_state_500k.shp')
+shape_data = shape_data[shape_data['NAME'].isin(us_states)]  # Keep only the required states
+
+# Merge state enforcement data with the shapefile data
+map_with_data = shape_data.merge(state_data, left_on='NAME', right_on='State', how='left')
+map_with_data['Enforcement Actions'].fillna(0, inplace=True)
+
+# Plotting the map
+fig, ax = plt.subplots(figsize=(20, 12))  # Use larger size for better visibility
+
+# Use 'plasma' colormap
+map_colors = map_with_data.plot(column='Enforcement Actions', ax=ax, cmap='plasma', legend=False)
+
+# Draw state boundaries
+map_with_data.boundary.plot(ax=ax, linewidth=1, edgecolor='black')
+
+# Create color bar and adjust position
+divider = make_axes_locatable(ax)
+color_axis = divider.append_axes("bottom", size="5%", pad=0.5)
+color_bar = plt.colorbar(map_colors.collections[0], cax=color_axis, orientation='horizontal')
+color_bar.set_label('Enforcement Actions per State', size=12)
+color_bar.ax.tick_params(labelsize=10)
+
+# Adjust view to include Alaska and Hawaii
+ax.set_xlim(-180, -65)  # Set x-axis range to include Alaska
+ax.set_ylim(15, 75)     # Set y-axis range to include Hawaii
+
+# Turn off axis for a cleaner map display
+ax.set_axis_off()
+
+plt.show()
 ```
 
 
