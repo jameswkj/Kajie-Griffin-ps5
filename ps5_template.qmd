@@ -425,6 +425,9 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
+data = pd.read_csv(file_path)
+
 # Define U.S. states list
 us_states = [
     "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", 
