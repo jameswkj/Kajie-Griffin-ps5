@@ -372,7 +372,7 @@ chart.display()
 * based on five topics
 
 ```{python}
-# Load the CSV file into a DataFrame
+# Load the dataset
 data = pd.read_csv('/Users/Kaijie/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
 
 # Function to categorize titles based on keywords
@@ -392,21 +392,25 @@ def categorize_title(title):
 # Apply categorization function to the title column
 data['Topic'] = data['Title'].apply(categorize_title)
 
-# Group by topic and count occurrences
-topic_counts = data['Topic'].value_counts().reset_index()
-topic_counts.columns = ['Topic', 'Number of Actions']
+# Convert 'Date' to datetime and format it as 'YYYY-MM'
+data['Date'] = pd.to_datetime(data['Date']).dt.strftime('%Y-%m')
+
+# Group the data by Topic and Date and count the occurrences
+grouped_data = data.groupby(['Topic', 'Date']).size().reset_index(name='Number of Actions')
 
 # Create a line chart using Altair
-line_chart = alt.Chart(topic_counts).mark_line(point=True).encode(
-    x=alt.X('Topic', sort=None, title='Topic'),
-    y=alt.Y('Number of Actions', title='Number of Actions'),
-    tooltip=['Topic', 'Number of Actions']
+line_chart = alt.Chart(grouped_data).mark_line(point=True).encode(
+    x=alt.X('Date:T', title='Date', axis=alt.Axis(format='%Y-%m')),
+    y=alt.Y('Number of Actions:Q', title='Number of Actions'),
+    color='Topic:N',
+    tooltip=['Topic', 'Date', 'Number of Actions']
 ).properties(
-    title='Number of Enforcement Actions by Topic',
+    title='Number of Enforcement Actions by Topic Over Time',
     width=600,
     height=400
 )
 
+# Display the chart
 line_chart.display()
 ```
 
