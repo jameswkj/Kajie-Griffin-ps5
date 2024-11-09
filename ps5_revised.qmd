@@ -45,6 +45,11 @@ import pandas as pd
 import altair as alt
 import time
 from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+import re
+import geopandas as gpd
+import json
 
 import warnings 
 warnings.filterwarnings('ignore')
@@ -57,11 +62,6 @@ alt.renderers.enable("png")
 ### 1. Scraping (PARTNER 1)
 
 ```{python}
-# Required libraries for web scraping and data handling
-import requests
-from bs4 import BeautifulSoup
-import pandas as pd
-
 # Define the target URL for scraping data
 oig_url = 'https://oig.hhs.gov/fraud/enforcement/'
 
@@ -315,7 +315,33 @@ if not partner_test_df.empty:
 ### 1. Plot the number of enforcement actions over time (PARTNER 2)
 
 ```{python}
+# Load the data
+file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
+enforcement_data = pd.read_csv(file_path)
 
+# Convert 'Date' column to datetime format and drop any rows with invalid dates
+enforcement_data['Date'] = pd.to_datetime(enforcement_data['Date'], errors='coerce')
+enforcement_data = enforcement_data.dropna(subset=['Date'])
+
+# Extract month and year from 'Date' and group by it
+enforcement_data['YearMonth'] = enforcement_data['Date'].dt.to_period('M')
+monthly_counts = enforcement_data.groupby('YearMonth').size().reset_index(name='Count')
+
+# Convert YearMonth to string for Altair compatibility
+monthly_counts['YearMonth'] = monthly_counts['YearMonth'].astype(str)
+
+# Create the Altair line chart showing total enforcement actions over time
+chart = alt.Chart(monthly_counts).mark_line(point=True).encode(
+    x=alt.X('YearMonth:T', title='Month'),
+    y=alt.Y('Count', title='Total Enforcement Actions'),
+    tooltip=['YearMonth', 'Count']
+).properties(
+    title='Monthly Total Enforcement Actions since January 2021',
+    width=600,
+    height=400
+).interactive()
+
+chart.display()
 ```
 
 ### 2. Plot the number of enforcement actions categorized: (PARTNER 1)
@@ -323,9 +349,6 @@ if not partner_test_df.empty:
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
-import pandas as pd
-import altair as alt
-
 # Load the data
 file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
 enforcement_data = pd.read_csv(file_path)
@@ -418,12 +441,6 @@ line_chart.display()
 
 ### 1. Map by State (PARTNER 1)
 ```{python}
-import re
-import pandas as pd
-import geopandas as gpd
-import altair as alt
-import json
-
 # Load the enforcement actions data
 file_path = r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv'
 data = pd.read_csv(file_path)
@@ -496,11 +513,6 @@ chart.display()
 
 ### 2. Map by District (PARTNER 2)
 ```{python}
-import pandas as pd
-import geopandas as gpd
-import altair as alt
-import json
-
 # Load the enforcement actions data
 enforcement_df = pd.read_csv(r'C:/Users/james/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
 enforcement_df['District'] = enforcement_df['Agency'].str.extract(r'U\.S\. Attorney\'s Office, (.*)')[0]
@@ -542,8 +554,6 @@ chart.display()
 
 ### 1. Merge zip code shapefile with population
 ```{python}
-import geopandas as gpd
-
 # Open the CSV file containing population information and adjust column names
 pop_data = pd.read_csv(r'C:/Users/james/Desktop/DECENNIALDHC2020.P1_2024-11-09T130011/DECENNIALDHC2020.P1-Data.csv')
 pop_data.columns = ['GEO_ID', 'NAME', 'Total_Population', 'Unused_Col']
@@ -579,11 +589,6 @@ print(district_pop_total)
 
 ### 3. Map the action ratio in each district
 ```{python}
-import pandas as pd
-import geopandas as gpd
-import altair as alt
-import json
-
 # Load enforcement actions data
 enforcement_data = pd.read_csv(r'C:/Users/james/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
 enforcement_data['Date'] = pd.to_datetime(enforcement_data['Date'], errors='coerce')
