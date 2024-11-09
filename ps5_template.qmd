@@ -506,15 +506,85 @@ plt.show()
 
 ### 1. Merge zip code shapefile with population
 ```{python}
+import geopandas as gpd
 
+# Open the CSV file containing population information and adjust column names
+pop_data = pd.read_csv(r'C:/Users/james/Desktop/DECENNIALDHC2020.P1_2024-11-09T130011/DECENNIALDHC2020.P1-Data.csv')
+pop_data.columns = ['GEO_ID', 'NAME', 'Total_Population', 'Unused_Col']
+pop_data = pop_data.iloc[1:].drop(columns=['Unused_Col'])  # Remove unneeded row and column
+pop_data['ZIP_CODE'] = pop_data['GEO_ID'].str[-5:]  # Extract ZIP code as a new column
+pop_data['Total_Population'] = pd.to_numeric(pop_data['Total_Population'])  # Convert to numeric format
+
+# Load ZIP code shapefile and join with the population dataset
+zip_shapefile = gpd.read_file(r'C:/Users/james/Desktop/gz_2010_us_860_00_500k/gz_2010_us_860_00_500k.shp')
+combined_data = zip_shapefile.merge(pop_data, left_on='ZCTA5', right_on='ZIP_CODE', how='left')
+
+# Display the resulting dataset
+print(combined_data)
 ```
 
 ### 2. Conduct spatial join
 ```{python}
+# Load the district shapefile
+gdf_map = gpd.read_file(r'C:\Users\james\Desktop\US Attorney Districts Shapefile simplified_20241109\geo_export_0fe6c47a-9f8d-4986-a592-42ca38b140ed.shp')
 
+# Ensure CRS match
+combined_data = combined_data.to_crs(gdf_map.crs)
+
+# Spatial join to associate ZIP codes within districts
+zip_district_joined = gpd.sjoin(combined_data, gdf_map, how='inner', predicate='within')
+
+# Aggregate population by district
+district_pop_total = zip_district_joined.groupby('judicial_d')['Total_Population'].sum().reset_index()
+
+# Display the aggregated population by district
+print(district_pop_total)
 ```
 
 ### 3. Map the action ratio in each district
 ```{python}
+import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
 
+# Load enforcement actions data
+enforcement_data = pd.read_csv(r'C:/Users/james/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
+enforcement_data['Date'] = pd.to_datetime(enforcement_data['Date'], errors='coerce')
+
+# Filter for actions since January 1, 2021, and extract district names
+filtered_actions = enforcement_data[enforcement_data['Date'] >= '2021-01-01']
+filtered_actions['District'] = filtered_actions['Agency'].str.extract(r'Office, (.*)')[0]
+
+# Aggregate enforcement actions by district
+actions_per_district = filtered_actions.groupby('District').size().reset_index(name='Enforcement_Actions')
+
+# Ensure 'district_pop_total' has 'District' and 'Total_Population' columns
+if 'judicial_d' in district_pop_total.columns:
+    district_pop_total = district_pop_total.rename(columns={'judicial_d': 'District'})  # Align with actions_per_district
+
+# Merge enforcement data with district population data
+district_data = district_pop_total.merge(actions_per_district, on='District', how='left')
+district_data['Enforcement_Actions'] = district_data['Enforcement_Actions'].fillna(0)  # Fill NaNs with 0 for districts with no actions
+district_data['Enforcement_Ratio'] = district_data['Enforcement_Actions'] / district_data['Total_Population']
+
+# Load the district shapefile for mapping
+district_shapefile = gpd.read_file(r'C:/Users/james/Desktop/US Attorney Districts Shapefile simplified_20241109/geo_export_0fe6c47a-9f8d-4986-a592-42ca38b140ed.shp')
+
+# Merge the ratio data with the district shapefile
+district_map = district_shapefile.merge(district_data, left_on='judicial_d', right_on='District', how='left')
+
+# Plot the ratio of enforcement actions per population
+fig, ax = plt.subplots(1, 1, figsize=(20, 12))  # Larger figure size
+district_map.plot(
+    column='Enforcement_Ratio', cmap='OrRd', linewidth=0.5, ax=ax, edgecolor='0.5',
+    legend=True, legend_kwds={'shrink': 0.4, 'label': "Enforcement Actions per Capita", 'orientation': "horizontal", 'pad': 0.05}
+)
+
+# Customize the title and layout for a clearer display
+ax.set_title("Ratio of Enforcement Actions to Population by U.S. Attorney District", fontsize=18, pad=20)
+ax.set_axis_off()
+
+# Tighten spacing around the map
+plt.subplots_adjust(left=0.02, right=0.98, top=0.92, bottom=0.08)
+plt.show()
 ```
