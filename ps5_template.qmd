@@ -1,7 +1,7 @@
 ---
-title: "title"
-author: "author"
-date: "date"
+title: "Pset 5"
+author: "Kaijie Wu and Griffin Sharps"
+date: "November 9, 2024"
 format: 
   pdf:
     include-in-header: 
@@ -26,8 +26,8 @@ output:
 ## Submission Steps (10 pts)
 1. This problem set is a paired problem set.
 2. Play paper, scissors, rock to determine who goes first. Call that person *Partner 1*.
-    - Partner 1 (name and cnet ID):
-    - Partner 2 (name and cnet ID):
+    - Partner 1 (name and cnet ID): 
+    - Partner 2 (name and cnet ID): Griffin Sharps, gsharps
 3. Partner 1 will accept the `ps5` and then share the link it creates with their partner. You can only share it with one partner so you will not be able to change it after your partner has accepted. 
 4. "This submission is our work alone and complies with the 30538 integrity policy." Add your initials to indicate your agreement: \*\*\_\_\*\* \*\*\_\_\*\*
 5. "I have uploaded the names of anyone else other than my partner and I worked with on the problem set **[here](https://docs.google.com/forms/d/185usrCREQaUbvAXpWhChkjghdGgmAZXA3lPWpXLLsts/edit)**"  (1 point)
@@ -37,6 +37,8 @@ output:
 8. (Partner 1): push  `ps5.qmd` and `ps5.pdf` to your github repo.
 9. (Partner 1): submit `ps5.pdf` via Gradescope. Add your partner on Gradescope.
 10. (Partner 1): tag your submission in Gradescope
+
+In the interest of full transparency and per the instructions of staff: we used ChatGPT to review and edit our code for clarity and efficieny, as well as to provide annotation.
 
 \newpage
 
@@ -60,7 +62,6 @@ alt.renderers.enable("png")
 # Required libraries for web scraping and data handling
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 # Define the target URL for scraping data
 oig_url = 'https://oig.hhs.gov/fraud/enforcement/'
@@ -157,36 +158,33 @@ detailed_dataframe.to_csv('enforcement_actions_detailed.csv', index=False)
 
 * a. Pseudo-Code (PARTNER 2)
 
-Define the function and its 2 inputs 
+Define the function and its 2 inputs (month and year).
 
-Check for valid year
-
-Use an if statement: if start_year earlier than 2013, print a message telling user its invalid. 
-No else statement needed.
+Check for valid year:
+    Use an if statement: if start_year earlier than 2013, print a message telling user its invalid. 
+    No else statement needed.
 
 Setup base_url and an empty list as in previous code.
 
 Create datetime object from inputs and grab today's date as a datetime object.
 
-Use a While loop. 
-The loop should go through the site's pages until it finds a date outside of the range specified. That is, it should start with the current date and move backwards until it finds a date older than the function inputs. But we can't do that here. It makes more sense to do it in the For loop below.
-The While loop also needs a counter to move forward through the website's pages.
+Use a While loop: 
+    The loop should go through the site's pages until it finds a date outside of the range specified. That is, it should start with the current date and move backwards until it finds a date older than the function inputs. But we can't do that here. It makes more sense to do it in the For loop below.
+    The While loop also needs a counter to move forward through the website's pages.
+    Use requests.get() to fetch the data from the page.
 
-Use requests.get() to fetch the data from the page.
+Then, using the scrapping/crawling code above as a guide...
+    Use BeautifulSoup to parse the HTML content of the page. This code to be based on the code above.
 
-Then, using the code above as a guide...
-
-Use BeautifulSoup to parse the HTML content of the page. This code to be based on the code above.
-
-Begin a For loop. For each action find:
+Begin the For loop. For each action find:
   Title and Link
   Date
   Category
   Agency Information:
-This is where we create the conditions to exit the While loop. If the date is older than the inputs of the function, the function should just return what its got and stop looping.
+    This is also where we create the conditions to exit the While loop. If the date is older than the inputs of the function, the function should just return what its got and stop looping.
 
 Create a dictionary of the actions.
-Append this dictionary to empty list.
+    Append this dictionary to empty list.
 
 Use time.sleep(1) to wait for 1 second.
 
@@ -323,11 +321,9 @@ if not partner_test_df.empty:
 * based on "Criminal and Civil Actions" vs. "State Enforcement Agencies"
 
 ```{python}
-import pandas as pd
-import altair as alt
-
 # Load the data
-file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
+file_path = ('/Users/griffinsharps/Documents/Repos/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv') 
+
 enforcement_data = pd.read_csv(file_path)
 
 # Convert 'Date' column to datetime format to handle monthly grouping
@@ -373,7 +369,7 @@ chart.display()
 
 ```{python}
 # Load the dataset
-data = pd.read_csv('/Users/Kaijie/Desktop/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
+data = pd.read_csv('/Users/griffinsharps/Documents/Repos/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv')
 
 # Function to categorize titles based on keywords
 def categorize_title(title):
@@ -420,12 +416,11 @@ line_chart.display()
 
 ```{python}
 import re
-import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-file_path = (r'C:\Users\james\Desktop\Kajie-Griffin-ps5\enforcement_actions_2021_01.csv') 
+file_path = ('/Users/griffinsharps/Documents/Repos/Kajie-Griffin-ps5/enforcement_actions_2021_01.csv') 
 data = pd.read_csv(file_path)
 
 # Define U.S. states list
